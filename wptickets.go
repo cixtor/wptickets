@@ -72,9 +72,10 @@ func httpRequest(urlStr string) io.Reader {
 }
 
 func analyzeMonthStats(plugin string) {
-	var urlStr string = fmt.Sprintf("https://wordpress.org/plugins/%s/", plugin)
-	var response io.Reader = httpRequest(urlStr)
-	var scanner *bufio.Scanner = bufio.NewScanner(response)
+	urlStr := fmt.Sprintf("https://wordpress.org/plugins/%s/", plugin)
+	response := httpRequest(urlStr)
+	scanner := bufio.NewScanner(response)
+
 	var line string
 
 	for scanner.Scan() {
@@ -92,10 +93,11 @@ func analyzeMonthStats(plugin string) {
 func analyzePageTickets(wg *sync.WaitGroup, plugin string, page int) {
 	defer wg.Done()
 
-	var urlStr string = fmt.Sprintf("https://wordpress.org/support/plugin/%s/page/%d", plugin, page)
-	var response io.Reader = httpRequest(urlStr)
-	var scanner *bufio.Scanner = bufio.NewScanner(response)
-	var pagepad string = fmt.Sprintf("%2d", page)
+	urlStr := fmt.Sprintf("https://wordpress.org/support/plugin/%s/page/%d", plugin, page)
+	response := httpRequest(urlStr)
+	scanner := bufio.NewScanner(response)
+	pagepad := fmt.Sprintf("%2d", page)
+
 	var resolvedpad string
 	var status string
 	var resolved int
@@ -106,11 +108,11 @@ func analyzePageTickets(wg *sync.WaitGroup, plugin string, page int) {
 		line = scanner.Text()
 
 		if strings.Contains(line, "<ul id=\"bbp-topic-") {
-			maximum += 1
+			maximum++
 		}
 
 		if strings.Contains(line, ">[Resolved]") {
-			resolved += 1
+			resolved++
 		}
 	}
 
@@ -123,7 +125,7 @@ func analyzePageTickets(wg *sync.WaitGroup, plugin string, page int) {
 	if resolved == maximum {
 		status = fmt.Sprintf("\033[0;92m%s\033[0m", "\u2714")
 	} else {
-		var missing int = maximum - resolved
+		missing := maximum - resolved
 
 		if missing > 6 {
 			status = fmt.Sprintf("\033[0;91m%s\033[0m", "\u2718")
@@ -146,16 +148,16 @@ func analyzePageTickets(wg *sync.WaitGroup, plugin string, page int) {
 func main() {
 	flag.Parse()
 
-	var plugin string = flag.Arg(0)
-	var pages string = flag.Arg(1)
-	var limit int = 10
+	plugin := flag.Arg(0)
+	pages := flag.Arg(1)
+	limit := 10
 
 	if plugin == "" {
 		fmt.Println("WordPress Tickets")
 		fmt.Println("  https://cixtor.com/")
 		fmt.Println("  https://wordpress.org/support/")
 		fmt.Println("  https://github.com/cixtor/wptickets")
-		fmt.Println("Usage: wptickets [plugin] [pages]\n")
+		fmt.Println("Usage: wptickets [plugin] [pages]")
 		os.Exit(2)
 	}
 
