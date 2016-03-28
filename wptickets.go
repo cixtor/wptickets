@@ -34,9 +34,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -90,9 +90,7 @@ func analyzeMonthStats(plugin string) {
 	}
 }
 
-func analyzePageTickets(wg *sync.WaitGroup, plugin string, page int) {
-	defer wg.Done()
-
+func analyzePageTickets(result chan string, plugin string, page int) {
 	urlStr := fmt.Sprintf("https://wordpress.org/support/plugin/%s/page/%d", plugin, page)
 	response := httpRequest(urlStr)
 	scanner := bufio.NewScanner(response)
@@ -117,6 +115,7 @@ func analyzePageTickets(wg *sync.WaitGroup, plugin string, page int) {
 	}
 
 	if maximum == 0 {
+		result <- ""
 		return /* Non-existent page */
 	}
 
@@ -138,11 +137,21 @@ func analyzePageTickets(wg *sync.WaitGroup, plugin string, page int) {
 		status += fmt.Sprintf(" (%d missing) %s", missing, urlStr)
 	}
 
-	fmt.Printf("- Page %s %s/%d %s\n",
+	result <- fmt.Sprintf("- Page %s %s/%d %s",
 		pagepad,
 		resolvedpad,
 		maximum,
 		status)
+}
+
+func reportResults(results []string) {
+	sort.Strings(results)
+
+	for _, stats := range results {
+		if stats != "" {
+			fmt.Println(stats)
+		}
+	}
 }
 
 func main() {
@@ -175,17 +184,27 @@ func main() {
 		}
 	}
 
-	var wg sync.WaitGroup
+	var final []string
 
-	wg.Add(limit)
+	result := make(chan string)
 
 	for key := 1; key <= limit; key++ {
-		go analyzePageTickets(&wg, plugin, key)
+		go analyzePageTickets(result, plugin, key)
 	}
 
-	wg.Wait()
+Collector:
+	for {
+		select {
+		case data := <-result:
+			final = append(final, data)
+			break
+		default:
+			if len(final) >= limit {
+				break Collector
+			}
+		}
+	}
 
+	reportResults(final)
 	analyzeMonthStats(plugin)
-
-	os.Exit(0)
 }
