@@ -22,3 +22,43 @@
  * responsiveness and promptness, other use this as one of the main reasons to
  * install or not a plugin.
  */
+
+package main
+
+import (
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
+)
+
+func httpRequest(urlStr string) []byte {
+	req, err := http.NewRequest("GET", urlStr, nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return body
+}
