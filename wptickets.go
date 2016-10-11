@@ -113,3 +113,48 @@ func analyzePageTickets(wg *sync.WaitGroup, plugin string, page int) {
 
 	defer wg.Done()
 }
+
+func main() {
+	flag.Parse()
+
+	var plugin string = flag.Arg(0)
+	var pages string = flag.Arg(1)
+	var limit int = 10
+
+	if plugin == "" {
+		fmt.Println("WordPress Tickets")
+		fmt.Println("  https://cixtor.com/")
+		fmt.Println("  https://wordpress.org/support/")
+		fmt.Println("  https://github.com/cixtor/wptickets")
+		fmt.Println("Usage: wptickets [plugin] [pages]\n")
+		os.Exit(2)
+	}
+
+	fmt.Printf("Plugin.: %s\n", plugin)
+	fmt.Printf("Website: https://wordpress.org/plugins/%s/\n", plugin)
+	fmt.Printf("Support: https://wordpress.org/support/plugin/%s/\n", plugin)
+	fmt.Printf("\n")
+	fmt.Printf("Resolved threads:\n")
+
+	if pages != "" {
+		number, err := strconv.Atoi(pages)
+
+		if err == nil {
+			limit = number
+		}
+	}
+
+	var wg sync.WaitGroup
+
+	wg.Add(limit)
+
+	for key := 1; key <= limit; key++ {
+		go analyzePageTickets(&wg, plugin, key)
+	}
+
+	wg.Wait()
+
+	analyzeMonthStats(plugin)
+
+	os.Exit(0)
+}
