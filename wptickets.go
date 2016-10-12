@@ -36,6 +36,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 func httpRequest(urlStr string) []byte {
@@ -54,7 +55,7 @@ func httpRequest(urlStr string) []byte {
 	req.Header.Set("user-agent", "Mozilla/5.0 (KHTML, like Gecko) Safari/537.36")
 	req.Header.Set("accept", "text/html,application/xhtml+xml,application/xml")
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
 
 	if err != nil {
