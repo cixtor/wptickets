@@ -34,7 +34,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -74,14 +73,19 @@ func httpRequest(urlStr string) io.Reader {
 
 func analyzeMonthStats(plugin string) {
 	var urlStr string = fmt.Sprintf("https://wordpress.org/plugins/%s/", plugin)
-	var response []byte = httpRequest(urlStr)
-	var output string = string(response)
-	re := regexp.MustCompile(`(\d+) of (\d+) support threads .+ have been marked resolved`)
+	var response io.Reader = httpRequest(urlStr)
+	var scanner *bufio.Scanner = bufio.NewScanner(response)
+	var line string
 
-	var matches []string = re.FindAllString(output, -1)
+	for scanner.Scan() {
+		line = scanner.Text()
 
-	if len(matches) > 0 {
-		fmt.Printf("\n%s\n", matches[0])
+		if strings.Contains(line, "have been marked resolved") {
+			line = strings.Replace(line, "</p>", "", -1)
+			line = strings.TrimSpace(line)
+			fmt.Println("\n" + line)
+			break
+		}
 	}
 }
 
