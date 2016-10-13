@@ -26,9 +26,11 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -39,7 +41,7 @@ import (
 	"time"
 )
 
-func httpRequest(urlStr string) []byte {
+func httpRequest(urlStr string) io.Reader {
 	req, err := http.NewRequest("GET", urlStr, nil)
 
 	if err != nil {
@@ -64,13 +66,10 @@ func httpRequest(urlStr string) []byte {
 
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	var buf bytes.Buffer
+	(&buf).ReadFrom(resp.Body)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return body
+	return &buf
 }
 
 func analyzeMonthStats(plugin string) {
@@ -87,41 +86,57 @@ func analyzeMonthStats(plugin string) {
 }
 
 func analyzePageTickets(wg *sync.WaitGroup, plugin string, page int) {
+	defer wg.Done()
+
 	var urlStr string = fmt.Sprintf("https://wordpress.org/support/plugin/%s/page/%d", plugin, page)
-	var response []byte = httpRequest(urlStr)
-	var output string = string(response)
+	var response io.Reader = httpRequest(urlStr)
+	var scanner *bufio.Scanner = bufio.NewScanner(response)
+	var pagepad string = fmt.Sprintf("%2d", page)
+	var resolvedpad string
+	var status string
+	var resolved int
+	var line string
+	var maximum int
 
-	if strings.Contains(output, "bbp-topics") {
-		var resolved int = strings.Count(output, ">[Resolved]")
-		var resolvedWithPadding string = fmt.Sprintf("%2d", resolved)
-		var pageWithPadding string = fmt.Sprintf("%2d", page)
-		var maximumPerPage int = strings.Count(output, "<ul id=\"bbp-topic-")
-		var status string
+	for scanner.Scan() {
+		line = scanner.Text()
 
-		if resolved == maximumPerPage {
-			status = fmt.Sprintf("\033[0;92m%s\033[0m", "\u2714")
-		} else {
-			var missing int = maximumPerPage - resolved
-
-			if missing > 6 {
-				status = fmt.Sprintf("\033[0;91m%s\033[0m", "\u2718")
-			} else if missing > 3 {
-				status = fmt.Sprintf("\033[0;93m%s\033[0m", "\u2622")
-			} else {
-				status = fmt.Sprintf("\033[0;94m%s\033[0m", "\u2022")
-			}
-
-			status += fmt.Sprintf(" (%d missing) %s", missing, urlStr)
+		if strings.Contains(line, "<ul id=\"bbp-topic-") {
+			maximum += 1
 		}
 
-		fmt.Printf("- Page %s %s/%d %s\n",
-			pageWithPadding,
-			resolvedWithPadding,
-			maximumPerPage,
-			status)
+		if strings.Contains(line, ">[Resolved]") {
+			resolved += 1
+		}
 	}
 
-	defer wg.Done()
+	if maximum == 0 {
+		return /* Non-existent page */
+	}
+
+	resolvedpad = fmt.Sprintf("%2d", resolved)
+
+	if resolved == maximum {
+		status = fmt.Sprintf("\033[0;92m%s\033[0m", "\u2714")
+	} else {
+		var missing int = maximum - resolved
+
+		if missing > 6 {
+			status = fmt.Sprintf("\033[0;91m%s\033[0m", "\u2718")
+		} else if missing > 3 {
+			status = fmt.Sprintf("\033[0;93m%s\033[0m", "\u2622")
+		} else {
+			status = fmt.Sprintf("\033[0;94m%s\033[0m", "\u2022")
+		}
+
+		status += fmt.Sprintf(" (%d missing) %s", missing, urlStr)
+	}
+
+	fmt.Printf("- Page %s %s/%d %s\n",
+		pagepad,
+		resolvedpad,
+		maximum,
+		status)
 }
 
 func main() {
