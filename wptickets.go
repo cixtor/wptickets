@@ -192,17 +192,9 @@ func main() {
 		go analyzePageTickets(result, plugin, key)
 	}
 
-Collector:
-	for {
-		select {
-		case data := <-result:
-			final = append(final, data)
-			break
-		default:
-			if len(final) >= limit {
-				break Collector
-			}
-		}
+	for i := 0; i < limit; i++ {
+		data := <-result
+		final = append(final, data)
 	}
 
 	reportResults(final)
