@@ -81,10 +81,13 @@ func analyzeMonthStats(plugin string) {
 	for scanner.Scan() {
 		line = scanner.Text()
 
-		if strings.Contains(line, "have been marked resolved") {
-			line = strings.Replace(line, "</p>", "", -1)
+		if strings.Contains(line, "\x20out of\x20") {
+			line = strings.Replace(line, "</span>", "", -1)
 			line = strings.TrimSpace(line)
-			fmt.Println("\n" + line)
+			if line[0:4] == "<div" {
+				continue
+			}
+			fmt.Println("\nIssues resolved in last two months: " + line)
 			break
 		}
 	}
