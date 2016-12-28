@@ -109,7 +109,7 @@ func analyzePageTickets(result chan string, plugin string, page int) {
 			maximum++
 		}
 
-		if strings.Contains(line, ">[Resolved]") {
+		if strings.Contains(line, "aria-label=\"Resolved\"") {
 			resolved++
 		}
 	}
