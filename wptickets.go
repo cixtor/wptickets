@@ -40,14 +40,13 @@ import (
 	"time"
 )
 
-func httpRequest(urlStr string) io.Reader {
-	req, err := http.NewRequest("GET", urlStr, nil)
+func httpRequest(target string) io.Reader {
+	req, err := http.NewRequest(http.MethodGet, target, nil)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	req.Header.Set("dnt", "1")
 	req.Header.Set("pragma", "no-cache")
 	req.Header.Set("cache-control", "no-cache")
 	req.Header.Set("authority", "wordpress.org")
@@ -158,6 +157,18 @@ func reportResults(results []string) {
 }
 
 func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "WordPress Tickets\n")
+		fmt.Fprintf(os.Stderr, "https://cixtor.com/\n")
+		fmt.Fprintf(os.Stderr, "https://wordpress.org/support/\n")
+		fmt.Fprintf(os.Stderr, "https://github.com/cixtor/wptickets\n")
+		fmt.Fprintf(os.Stderr, "\nUsage:\n")
+		fmt.Fprintf(os.Stderr, "  wptickets [plugin]\n")
+		fmt.Fprintf(os.Stderr, "  wptickets [plugin] [pages]\n")
+
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 
 	plugin := flag.Arg(0)
@@ -165,11 +176,7 @@ func main() {
 	limit := 10
 
 	if plugin == "" {
-		fmt.Println("WordPress Tickets")
-		fmt.Println("  https://cixtor.com/")
-		fmt.Println("  https://wordpress.org/support/")
-		fmt.Println("  https://github.com/cixtor/wptickets")
-		fmt.Println("Usage: wptickets [plugin] [pages]")
+		flag.Usage()
 		os.Exit(2)
 	}
 
