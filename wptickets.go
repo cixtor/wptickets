@@ -71,9 +71,8 @@ func httpRequest(target string) io.Reader {
 }
 
 func analyzeMonthStats(plugin string) {
-	urlStr := fmt.Sprintf("https://wordpress.org/plugins/%s/", plugin)
-	response := httpRequest(urlStr)
-	scanner := bufio.NewScanner(response)
+	target := fmt.Sprintf("https://wordpress.org/plugins/%s/", plugin)
+	scanner := bufio.NewScanner(httpRequest(target))
 
 	var line string
 
@@ -90,12 +89,15 @@ func analyzeMonthStats(plugin string) {
 			break
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func analyzePageTickets(result chan string, plugin string, page int) {
-	urlStr := fmt.Sprintf("https://wordpress.org/support/plugin/%s/page/%d", plugin, page)
-	response := httpRequest(urlStr)
-	scanner := bufio.NewScanner(response)
+	target := fmt.Sprintf("https://wordpress.org/support/plugin/%s/page/%d", plugin, page)
+	scanner := bufio.NewScanner(httpRequest(target))
 	pagepad := fmt.Sprintf("%2d", page)
 
 	var resolvedpad string
@@ -116,6 +118,10 @@ func analyzePageTickets(result chan string, plugin string, page int) {
 		}
 	}
 
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
 	if maximum == 0 {
 		result <- ""
 		return /* Non-existent page */
@@ -131,19 +137,21 @@ func analyzePageTickets(result chan string, plugin string, page int) {
 		if missing > 6 {
 			status = fmt.Sprintf("\033[0;91m%s\033[0m", "\u2718")
 		} else if missing > 3 {
-			status = fmt.Sprintf("\033[0;93m%s\033[0m", "\u2622")
+			status = fmt.Sprintf("\033[0;93m%s\033[0m", "\u2731")
 		} else {
 			status = fmt.Sprintf("\033[0;94m%s\033[0m", "\u2022")
 		}
 
-		status += fmt.Sprintf(" (%d missing) %s", missing, urlStr)
+		status += fmt.Sprintf(" (%d missing) %s", missing, target)
 	}
 
-	result <- fmt.Sprintf("- Page %s %s/%d %s",
+	result <- fmt.Sprintf(
+		"- Page %s %s/%d %s",
 		pagepad,
 		resolvedpad,
 		maximum,
-		status)
+		status,
+	)
 }
 
 func reportResults(results []string) {
@@ -183,13 +191,10 @@ func main() {
 	fmt.Printf("Plugin.: %s\n", plugin)
 	fmt.Printf("Website: https://wordpress.org/plugins/%s/\n", plugin)
 	fmt.Printf("Support: https://wordpress.org/support/plugin/%s/\n", plugin)
-	fmt.Printf("\n")
-	fmt.Printf("Resolved threads:\n")
+	fmt.Printf("\nResolved threads:\n\n")
 
 	if pages != "" {
-		number, err := strconv.Atoi(pages)
-
-		if err == nil {
+		if number, err := strconv.Atoi(pages); err == nil {
 			limit = number
 		}
 	}
